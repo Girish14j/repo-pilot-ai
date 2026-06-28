@@ -55,7 +55,7 @@ class GitHubService:
 
         # httpx.Client is the synchronous HTTP client
         # "with" ensures the connection is properly closed after
-        with httpx.Client(headers=self.headers) as client:
+        with httpx.Client(headers=self.headers, follow_redirects=True) as client:
 
             # 1. Core repo metadata
             repo_response = client.get(f"{self.BASE_URL}/repos/{owner}/{repo}")
