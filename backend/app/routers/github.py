@@ -8,6 +8,7 @@ from app.services.github_service import GitHubService
 from app.services.ai_service import AIService
 # Read the repository information and review it like a senior software engineer.
 from app.services.assistant_service import AssistantService
+from app.graph.graph import repo_graph
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +101,42 @@ def full_report(request: RepoRequest):
     except Exception as e:
         logger.exception("Assistant pipeline failed")
         raise HTTPException(status_code=500, detail=f"Report error: {str(e)}")
+
+@router.post("/graph-analyze", response_model=dict) 
+def graph_analyze(request: RepoRequest):
+    """
+    Runs the LangGraph multi-agent pipeline.
+    Currently runs: Repository Agent → Architecture Agent
+    More agents will be added in Step 8.
+    
+    POST /api/github/graph-analyze
+    Body: { "url": "https://github.com/owner/repo" }
+    """
+    try:
+        # invoke() starts the graph with an initial state
+        # We only provide repo_url — everything else starts as None
+        # The graph fills in the rest as it runs
+        final_state = repo_graph.invoke({
+            "repo_url": request.url,
+            "repo_data": None,
+            "architecture_analysis": None,
+            "documentation_analysis": None,
+            "security_analysis": None,
+            "performance_analysis": None,
+            "refactoring_suggestions": None,
+            "interview_content": None,
+            "resume_content": None,
+            "final_report": None,
+            "completed_agents": [],
+            "errors": [],
+        })
+
+        return {
+            "completed_agents": final_state["completed_agents"],
+            "errors": final_state["errors"],
+            "repo": final_state["repo_data"],
+            "architecture": final_state["architecture_analysis"],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Graph error: {str(e)}")
