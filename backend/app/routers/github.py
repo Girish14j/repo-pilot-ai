@@ -105,17 +105,12 @@ def full_report(request: RepoRequest):
 @router.post("/graph-analyze", response_model=dict) 
 def graph_analyze(request: RepoRequest):
     """
-    Runs the LangGraph multi-agent pipeline.
-    Currently runs: Repository Agent → Architecture Agent
-    More agents will be added in Step 8.
-    
+    Runs the complete LangGraph multi-agent pipeline.
+    All 9 agents run in sequence with conditional routing.
     POST /api/github/graph-analyze
     Body: { "url": "https://github.com/owner/repo" }
     """
     try:
-        # invoke() starts the graph with an initial state
-        # We only provide repo_url — everything else starts as None
-        # The graph fills in the rest as it runs
         final_state = repo_graph.invoke({
             "repo_url": request.url,
             "repo_data": None,
@@ -131,12 +126,11 @@ def graph_analyze(request: RepoRequest):
             "errors": [],
         })
 
-        return {
-            "completed_agents": final_state["completed_agents"],
-            "errors": final_state["errors"],
-            "repo": final_state["repo_data"],
-            "architecture": final_state["architecture_analysis"],
-        }
+        return final_state.get("final_report", {
+            "error": "Final report not generated",
+            "completed_agents": final_state.get("completed_agents", []),
+            "errors": final_state.get("errors", []),
+        })
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Graph error: {str(e)}")
