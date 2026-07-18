@@ -1,176 +1,333 @@
 "use client";
 
-import { useState } from "react";
-import { fetchFullReport } from "../lib/api";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { GitBranch, Sparkles, Brain, Shield, BarChart3, FileText, Zap, Loader2, XCircle, Globe, Star, GitFork, Code2, ArrowRight } from "lucide-react";
+import { streamGraphAnalysis } from "../lib/api";
+import { FullReport } from "../lib/types";
+import ReportTabs from "@/components/report/ReportTab";
+import ChatWindow from "@/components/chat/ChatWindow";
 
-type Tab = "review" | "assistant";
+const EXAMPLE_REPOS = [
+  "https://github.com/tiangolo/fastapi",
+  "https://github.com/vercel/next.js",
+  "https://github.com/facebook/react",
+];
+
+const FEATURES = [
+  { icon: Brain,     label: "AI Code Review",  desc: "Deep analysis by LLM agents" },
+  { icon: Shield,    label: "Security Scan",   desc: "OWASP-based vulnerability check" },
+  { icon: BarChart3, label: "Score Breakdown", desc: "Architecture, docs, performance" },
+  { icon: FileText,  label: "Career Content",  desc: "Resume bullets & LinkedIn posts" },
+];
+
+const AGENTS = [
+  { key: "repository_agent",    label: "Repository",     icon: "🔍", desc: "Fetching GitHub data" },
+  { key: "architecture_agent",  label: "Architecture",   icon: "🏗️", desc: "Analyzing code structure" },
+  { key: "documentation_agent", label: "Documentation",  icon: "📄", desc: "Reviewing README quality" },
+  { key: "security_agent",      label: "Security",       icon: "🔒", desc: "OWASP vulnerability scan" },
+  { key: "performance_agent",   label: "Performance",    icon: "⚡", desc: "Identifying bottlenecks" },
+  { key: "interview_agent",     label: "Interview Prep", icon: "🎤", desc: "Generating questions" },
+  { key: "resume_agent",        label: "Resume",         icon: "📋", desc: "Writing bullet points" },
+  { key: "final_report_agent",  label: "Final Report",   icon: "✅", desc: "Assembling results" },
+];
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<any>(null);
-  const [tab, setTab] = useState<Tab>("review");
+  const [report, setReport] = useState<FullReport | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [typedText, setTypedText] = useState("");
+  const [agentResults, setAgentResults] = useState<Record<string, any>>({});
+  const [activeAgent, setActiveAgent] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const placeholder = "https://github.com/owner/repo";
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      setTypedText(placeholder.slice(0, i));
+      i++;
+      if (i > placeholder.length) clearInterval(interval);
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setData(null);
+    setReport(null);
+    setThreadId(null);
+    setAgentResults({});
+    setActiveAgent("");
     setLoading(true);
+
     try {
-      const result = await fetchFullReport(url);
-      setData(result);
+      for await (const event of streamGraphAnalysis(url)) {
+        if (event.agent === "error") {
+          setError(event.error);
+          break;
+        }
+        setActiveAgent(event.agent);
+        if (event.data) {
+          setAgentResults(prev => ({ ...prev, [event.agent]: event.data }));
+        }
+        if (event.agent === "final_report_agent" && event.data) {
+          const fullReport = event.data as FullReport;
+          setReport(fullReport);
+          const repoName = fullReport.repository?.full_name?.replace("/", "-") ?? "repo";
+          setThreadId(`${repoName}-${Date.now()}`);
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setActiveAgent("");
     }
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white p-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">🚀 RepoPilot AI</h1>
-        <p className="text-gray-400 mb-8">AI-powered GitHub repository reviewer & career assistant</p>
+    <div className="min-h-screen bg-[#020817] text-white relative overflow-hidden">
+
+      {/* Background orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="orb-1 absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-600/20 blur-[120px]" />
+        <div className="orb-2 absolute top-[30%] right-[-15%] w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[120px]" />
+        <div className="orb-3 absolute bottom-[-10%] left-[30%] w-[400px] h-[400px] rounded-full bg-cyan-600/15 blur-[100px]" />
+        <div className="grid-bg absolute inset-0" />
+      </div>
+
+      {/* Navbar */}
+      <motion.nav
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative z-10 flex items-center justify-between px-8 py-5 border-b border-white/5 backdrop-blur-sm"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <GitBranch className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-bold text-lg">RepoPilot <span className="text-indigo-400">AI</span></span>
+        </div>
+        <div className="flex items-center gap-6 text-sm text-gray-400">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            API Online
+          </span>
+          <a href="http://localhost:8000/docs" target="_blank" className="hover:text-white transition-colors flex items-center gap-1">
+            Swagger Docs <Globe className="w-3 h-3" />
+          </a>
+        </div>
+      </motion.nav>
+
+      <div className="relative z-10 max-w-5xl mx-auto px-6 py-16">
+
+        {/* Hero — only shown before any analysis */}
+        {!report && !loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 text-sm text-indigo-300 mb-6"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Powered by LangGraph Multi-Agent AI
+            </motion.div>
+
+            <h1 className="text-6xl font-bold mb-4 leading-tight">
+              Analyze any{" "}
+              <span className="shimmer-text">GitHub repo</span>
+              <br />in seconds
+            </h1>
+            <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
+              AI agents review your code architecture, security, documentation,
+              and generate career content — all for free.
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+              {FEATURES.map(({ icon: Icon, label, desc }) => (
+                <motion.div
+                  key={label}
+                  whileHover={{ scale: 1.03 }}
+                  className="card-glow bg-white/3 border border-white/8 rounded-xl p-4 text-left"
+                >
+                  <Icon className="w-5 h-5 text-indigo-400 mb-2" />
+                  <div className="font-semibold text-sm">{label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} className="flex gap-3 mb-8">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo"
-            className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 disabled:cursor-not-allowed px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            {loading ? "Analyzing..." : "Analyze"}
-          </button>
-        </form>
+        <motion.form
+          onSubmit={handleSubmit}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-8"
+        >
+          <div className="relative flex gap-3 p-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm focus-within:border-indigo-500/50 transition-colors">
+            <GitBranch className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder={typedText}
+              className="flex-1 bg-transparent pl-12 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none text-base"
+              required
+            />
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {loading ? "Analyzing..." : "Analyze"}
+            </motion.button>
+          </div>
+
+          {!report && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <span className="text-xs text-gray-600">Try:</span>
+              {EXAMPLE_REPOS.map((repo) => (
+                <button
+                  key={repo}
+                  type="button"
+                  onClick={() => setUrl(repo)}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  {repo.replace("https://github.com/", "")}
+                </button>
+              ))}
+            </div>
+          )}
+        </motion.form>
 
         {/* Error */}
-        {error && (
-          <div className="bg-red-900/50 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-6">
-            {error}
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 text-red-300 rounded-xl px-4 py-3 mb-6 text-sm"
+            >
+              <XCircle className="w-4 h-4 shrink-0" />
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Loading */}
-        {loading && (
-          <div className="text-center text-gray-400 py-16">
-            <div className="text-5xl mb-4 animate-spin inline-block">⚙️</div>
-            <p>Fetching repo & running AI analysis... this may take ~30s</p>
-          </div>
-        )}
-
-        {/* Results */}
-        {data && (
-          <div>
-            {/* Repo Header */}
-            <div className="bg-gray-900 rounded-xl p-5 mb-6">
-              <h2 className="text-xl font-bold">{data.repo.full_name}</h2>
-              <p className="text-gray-400 mt-1">{data.repo.description || "No description"}</p>
-              <div className="flex gap-4 mt-3 text-sm text-gray-400">
-                <span>⭐ {data.repo.stars}</span>
-                <span>🍴 {data.repo.forks}</span>
-                <span>💻 {data.repo.language}</span>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setTab("review")}
-                className={`px-5 py-2 rounded-lg font-semibold transition-colors ${tab === "review" ? "bg-blue-600" : "bg-gray-800 hover:bg-gray-700"}`}
-              >
-                Code Review
-              </button>
-              <button
-                onClick={() => setTab("assistant")}
-                className={`px-5 py-2 rounded-lg font-semibold transition-colors ${tab === "assistant" ? "bg-purple-600" : "bg-gray-800 hover:bg-gray-700"}`}
-              >
-                Developer Assistant
-              </button>
-            </div>
-
-            {/* Code Review Tab */}
-            {tab === "review" && (
-              <div className="space-y-5">
-                <div className="bg-gray-900 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-400 uppercase text-xs mb-2">Overall Score</h3>
-                  <p className="text-5xl font-bold text-blue-400">{data.analysis.overall_score}<span className="text-2xl text-gray-500">/10</span></p>
+        {/* Loading — agent pipeline progress */}
+        <AnimatePresence>
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              <div className="card-glow bg-white/3 border border-white/8 rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Brain className="w-5 h-5 text-indigo-400 animate-pulse" />
+                  <span className="font-semibold">AI Agents Running...</span>
+                  <span className="text-xs text-gray-500 ml-auto">
+                    {Object.keys(agentResults).length} / {AGENTS.length} complete
+                  </span>
                 </div>
+                <div className="space-y-3">
+                  {AGENTS.map(({ key, label, icon, desc }) => {
+                    const done    = key in agentResults;
+                    const running = activeAgent === key;
+                    return (
+                      <motion.div
+                        key={key}
+                        initial={{ opacity: 0.4 }}
+                        animate={{ opacity: done || running ? 1 : 0.4 }}
+                        className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                          running ? "bg-indigo-500/10 border border-indigo-500/20" :
+                          done    ? "bg-green-500/5 border border-green-500/10" :
+                                    "border border-transparent"
+                        }`}
+                      >
+                        <span className="text-lg w-6 text-center">{icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-medium ${
+                              done ? "text-green-400" : running ? "text-indigo-300" : "text-gray-500"
+                            }`}>{label}</span>
+                            {running && <Loader2 className="w-3 h-3 text-indigo-400 animate-spin" />}
+                            {done    && <span className="text-xs text-green-500">✓ Done</span>}
+                          </div>
+                          <p className="text-xs text-gray-600 truncate">{desc}</p>
+                        </div>
+                        {done && agentResults[key]?.score !== undefined && (
+                          <span className="text-sm font-bold text-indigo-400 shrink-0">
+                            {agentResults[key].score}/10
+                          </span>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                <div className="bg-gray-900 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-400 uppercase text-xs mb-3">Score Breakdown</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(data.analysis.scores).map(([key, val]: any) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="capitalize text-gray-300">{key.replace("_", " ")}</span>
-                        <span className="font-bold text-blue-400">{val}/10</span>
-                      </div>
-                    ))}
+        {/* Report */}
+        <AnimatePresence>
+          {report && !loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              {/* Repo header */}
+              <div className="card-glow bg-white/3 border border-white/8 rounded-2xl p-6 mb-6">
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <GitBranch className="w-5 h-5 text-gray-400" />
+                      <h2 className="text-xl font-bold">{report.repository.full_name}</h2>
+                    </div>
+                    <p className="text-gray-400 text-sm">{report.repository.description || "No description"}</p>
+                  </div>
+                  <div className="flex gap-4 text-sm text-gray-400">
+                    <span className="flex items-center gap-1"><Star className="w-4 h-4 text-yellow-400" />{report.repository.stars.toLocaleString()}</span>
+                    <span className="flex items-center gap-1"><GitFork className="w-4 h-4 text-blue-400" />{report.repository.forks.toLocaleString()}</span>
+                    <span className="flex items-center gap-1"><Code2 className="w-4 h-4 text-green-400" />{report.repository.language}</span>
                   </div>
                 </div>
-
-                <div className="bg-gray-900 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-400 uppercase text-xs mb-2">Executive Summary</h3>
-                  <p className="text-gray-300">{data.analysis.executive_summary}</p>
-                </div>
-
-                <Section title="✅ Strengths" items={data.analysis.strengths} color="text-green-400" />
-                <Section title="⚠️ Weaknesses" items={data.analysis.weaknesses} color="text-yellow-400" />
-                <Section title="🔒 Security Concerns" items={data.analysis.security_concerns} color="text-red-400" />
-                <Section title="📋 Recommendations" items={data.analysis.recommendations} color="text-blue-400" />
-                <Section title="📁 Missing Files" items={data.analysis.missing_files} color="text-gray-400" />
-
-                <div className="bg-gray-900 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-400 uppercase text-xs mb-2">Tech Stack</h3>
-                  <p className="text-gray-300">{data.analysis.tech_stack_summary}</p>
-                </div>
               </div>
-            )}
 
-            {/* Assistant Tab */}
-            {tab === "assistant" && (
-              <div className="space-y-5">
-                <Section title="📄 Resume Bullets" items={data.assistant.resume_bullets} color="text-purple-400" />
+              {/* Tabs */}
+              <ReportTabs report={report} />
 
-                <div className="bg-gray-900 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-400 uppercase text-xs mb-2">ATS Description</h3>
-                  <p className="text-gray-300">{data.assistant.ats_description}</p>
-                </div>
-
-                <Section title="🎤 Interview Questions" items={data.assistant.interview_questions} color="text-blue-400" />
-                <Section title="📝 README Improvements" items={data.assistant.readme_improvements} color="text-yellow-400" />
-                <Section title="💡 Feature Suggestions" items={data.assistant.feature_suggestions} color="text-green-400" />
-
-                <div className="bg-gray-900 rounded-xl p-5">
-                  <h3 className="font-semibold text-gray-400 uppercase text-xs mb-2">LinkedIn Post</h3>
-                  <p className="text-gray-300 whitespace-pre-line">{data.assistant.linkedin_post}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              {/* Chat */}
+              {threadId && <ChatWindow report={report} threadId={threadId} />}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </main>
-  );
-}
 
-function Section({ title, items, color }: { title: string; items: string[]; color: string }) {
-  return (
-    <div className="bg-gray-900 rounded-xl p-5">
-      <h3 className="font-semibold text-gray-400 uppercase text-xs mb-3">{title}</h3>
-      <ul className="space-y-2">
-        {items.map((item, i) => (
-          <li key={i} className={`${color} text-sm`}>• {item}</li>
-        ))}
-      </ul>
+      {/* Footer */}
+      <div className="relative z-10 text-center py-8 text-gray-700 text-xs border-t border-white/5">
+        RepoPilot AI — Built with FastAPI, LangGraph, Next.js
+      </div>
     </div>
   );
 }
