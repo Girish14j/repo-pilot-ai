@@ -1,5 +1,5 @@
 import os
-from openai import RateLimitError
+from openai import RateLimitError, APIConnectionError, APIStatusError
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -143,12 +143,12 @@ Score the architecture from 0-10 where:
                 )
                 result = (prompt | llm | parser).invoke(payload)
                 break
-            except RateLimitError as e:
-                print(f"⚠️  Model {model} rate limited, trying next...")
+            except (RateLimitError, APIConnectionError, APIStatusError) as e:
+                print(f"⚠️  Model {model} unavailable ({type(e).__name__}), trying next...")
                 last_error = e
 
         if result is None:
-            raise last_error or RuntimeError("All models rate limited")
+            raise last_error or RuntimeError("All models exhausted")
 
         print(f"✅ Architecture Agent: Score {result.get('score', 'N/A')}/10")
 

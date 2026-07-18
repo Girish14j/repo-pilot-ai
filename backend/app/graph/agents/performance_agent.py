@@ -1,4 +1,5 @@
 import os
+from openai import RateLimitError, APIConnectionError, APIStatusError
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -8,6 +9,18 @@ from typing import List
 from app.graph.state import RepoState
 
 load_dotenv()
+
+FREE_MODELS = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "nousresearch/hermes-3-llama-3.1-405b:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-120b:free",
+    "openai/gpt-oss-20b:free",
+    "qwen/qwen3-coder:free",
+    "google/gemma-4-31b-it:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+]
 
 
 class PerformanceAnalysis(BaseModel):
@@ -33,8 +46,8 @@ def performance_agent(state: RepoState) -> dict:
 
     if not state.get("repo_data"):
         return {
-            "perfromance_analysis": None,
-            "completed_agents": state.ge("completed_agents", []),
+            "performance_analysis": None,
+            "completed_agents": state.get("completed_agents", []),
             "errors": state.get("errors", []) + ["Performance Agent skipped: no repo_data"],
         }
 
@@ -48,12 +61,6 @@ def performance_agent(state: RepoState) -> dict:
         for lang, b in languages.items()
     ])
      
-    llm = ChatOpenAI(
-        model="meta-llama/llama-3.3-70b-instruct:free",
-        api_key=os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1/",
-        temperature=0.2,
-    )
     parser = JsonOutputParser(pydantic_object=PerformanceAnalysis)
 
     prompt = ChatPromptTemplate.from_messages([
@@ -89,13 +96,30 @@ Score 0-10 where 10 = excellent performance architecture."""
     ])
 
     try:
-        result = (prompt | llm | parser).invoke({
+        payload = {
             "format_instructions": parser.get_format_instructions(),
             "full_name": repo_data.get("full_name", "Unknown"),
             "languages": languages_str,
             "description": repo_data.get("description", "No description"),
             "file_tree": file_tree_str,
-        })
+        }
+        result = None
+        last_error = None
+        for model in FREE_MODELS:
+            try:
+                llm = ChatOpenAI(
+                    model=model,
+                    api_key=os.getenv("OPENROUTER_API_KEY"),
+                    base_url="https://openrouter.ai/api/v1/",
+                    temperature=0.2,
+                )
+                result = (prompt | llm | parser).invoke(payload)
+                break
+            except (RateLimitError, APIConnectionError, APIStatusError) as e:
+                print(f"⚠️  Model {model} unavailable ({type(e).__name__}), trying next...")
+                last_error = e
+        if result is None:
+            raise last_error or RuntimeError("All models exhausted")
 
         print(f"✅ Performance Agent: Score {result.get('score', 'N/A')}/10")
 
