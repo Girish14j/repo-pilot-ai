@@ -12,15 +12,15 @@ from app.rag.retriever import retrieve
 load_dotenv()
 
 FREE_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "nousresearch/hermes-3-llama-3.1-405b:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "openai/gpt-oss-120b:free",
-    "openai/gpt-oss-20b:free",
-    "qwen/qwen3-coder:free",
-    "google/gemma-4-31b-it:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
+    "meta-llama/llama-3.3-70b-instruct",
+    "nousresearch/hermes-3-llama-3.1-405b",
+    "nvidia/nemotron-3-ultra-550b",
+    "nvidia/nemotron-3-super-120b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3-coder",
+    "google/gemma-4-31b-it",
+    "meta-llama/llama-3.2-3b-instruct",
 ]
 
 class SecurityAnalysis(BaseModel):

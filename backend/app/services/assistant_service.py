@@ -1,6 +1,6 @@
 import os
 import logging
-from openai import RateLimitError
+from openai import RateLimitError, APIStatusError, APIConnectionError
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,15 +13,15 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 FREE_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "nousresearch/hermes-3-llama-3.1-405b:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "openai/gpt-oss-120b:free",
-    "openai/gpt-oss-20b:free",
-    "qwen/qwen3-coder:free",
-    "google/gemma-4-31b-it:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
+    "meta-llama/llama-3.3-70b-instruct",
+    "nousresearch/hermes-3-llama-3.1-405b",
+    "nvidia/nemotron-3-ultra-550b",
+    "nvidia/nemotron-3-super-120b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3-coder",
+    "google/gemma-4-31b-it",
+    "meta-llama/llama-3.2-3b-instruct",
 ]
 
 
@@ -130,11 +130,11 @@ INSTRUCTIONS:
                     "readme": readme_preview,
                 })
                 break
-            except RateLimitError as e:
-                logger.warning("Model %s rate limited, trying next...", model)
+            except (RateLimitError, APIStatusError, APIConnectionError) as e:
+                logger.warning("Model %s unavailable (%s), trying next...", model, type(e).__name__)
                 last_error = e
         else:
-            raise RuntimeError("All models rate limited. Try again in a minute.") from last_error
+            raise RuntimeError("All models were unavailable or rate limited. Try again in a minute.") from last_error
 
         if isinstance(result, DeveloperAssistant):
             return result
