@@ -56,7 +56,7 @@ Guidelines:
             response = llm.invoke(all_messages)
             break
         except (RateLimitError, APIConnectionError, APIStatusError) as e:
-            print(f"⚠️  Chat model {model} unavailable ({type(e).__name__}), trying next...")
+            print(f"[WARN] Chat model {model} unavailable ({type(e).__name__}), trying next...")
             last_error = e
 
     if response is None:
@@ -92,7 +92,7 @@ def build_chat_graph():
     # Pass checkpointer to compile() — this is what enables memory
     compiled = graph.compile(checkpointer=memory)
 
-    print("✅ Chat graph compiled with memory")
+    print("Chat graph compiled with memory")
     return compiled
 
 

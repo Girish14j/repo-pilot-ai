@@ -128,7 +128,7 @@ Score 0-10 where 10 = no security concerns found."""
                 result = (prompt | llm | parser).invoke(payload)
                 break
             except (RateLimitError, APIConnectionError, APIStatusError) as e:
-                print(f"⚠️  Model {model} unavailable ({type(e).__name__}), trying next...")
+                print(f"[WARN] Model {model} unavailable ({type(e).__name__}), trying next...")
                 last_error = e
         if result is None:
             raise last_error or RuntimeError("All models exhausted")
@@ -143,7 +143,7 @@ Score 0-10 where 10 = no security concerns found."""
 
     except Exception as e:
         error_msg = f"Security Agent failed: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
         return {
             "security_analysis": None,
             "completed_agents": state.get("completed_agents", []),

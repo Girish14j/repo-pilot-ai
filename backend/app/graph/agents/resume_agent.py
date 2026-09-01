@@ -120,7 +120,7 @@ Generate:
 
     except Exception as e:
         error_msg = f"Resume Agent failed: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
         return {
             "resume_content": None,
             "completed_agents": state.get("completed_agents", []),

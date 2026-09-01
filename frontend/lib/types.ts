@@ -81,6 +81,8 @@ export interface FullReport {
     security: SecurityAnalysis | null;
     performance: PerformanceAnalysis | null;
     refactoring: RefactoringAnalysis | null;
+    code_quality: CodeQualityAnalysis | null;      // ← NEW
+    optimization: OptimizationAnalysis | null;     // ← NEW
   };
   career: {
     interview: InterviewContent | null;
@@ -90,5 +92,40 @@ export interface FullReport {
     completed_agents: string[];
     errors: string[];
     total_agents_run: number;
+    files_analyzed: number;          // ← NEW
+    critical_issues_found: number;   // ← NEW
   };
 }
+
+export interface CodeIssue {
+  file: string;
+  issue: string;
+  severity: "critical" | "warning" | "suggestion";
+  line_hint: string | null;
+  fix: string;
+}
+
+export interface CodeQualityAnalysis {
+  score: number;
+  issues: CodeIssue[];
+  good_patterns: string[];
+  overall_assessment: string;
+  top_3_fixes: string[];
+}
+
+export interface OptimizationSuggestion {
+  file: string;
+  current_pattern: string;
+  optimized_pattern: string;
+  impact: string;
+  effort: string;
+  explanation: string;
+}
+
+export interface OptimizationAnalysis {
+  suggestions: OptimizationSuggestion[];
+  quick_wins: string[];
+  performance_score: number;
+  readability_score: number;
+  summary: string;
+} 

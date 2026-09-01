@@ -294,3 +294,83 @@ General API documentation rules:
         "metadata": {"topic": "documentation", "type": "api"}
     },
 ]
+
+# ─── Code Quality Best Practices ──────────────────────────────────────────
+{
+        "content": """Python Code Quality Best Practices:
+
+Function and class design:
+- Functions should do ONE thing and be under 20 lines ideally
+- Function names should be verbs: get_user(), create_order(), not user() or order()
+- Avoid functions with more than 3-4 parameters — use a dataclass or dict instead
+- Never use mutable default arguments: def func(items=[]) is a bug waiting to happen
+
+Common Python anti-patterns to flag:
+- Bare except clauses: except: (catches everything including KeyboardInterrupt)
+- Using == to compare with None: use 'is None' instead
+- String concatenation in loops: use join() or list comprehension
+- Not using context managers for file operations (with open() as f)
+- Catching exceptions and silently passing: except Exception: pass
+- Global variables modified inside functions without 'global' declaration
+- Nested functions more than 2 levels deep
+
+Performance patterns:
+- List comprehensions are faster than map/filter for simple operations
+- Use generators for large datasets instead of lists
+- Dictionary lookups are O(1) — prefer them over linear searches
+- Use 'in' operator for membership testing in sets, not lists""",
+        "metadata": {"topic": "code_quality", "language": "python"}
+    },
+
+{
+        "content": """JavaScript and TypeScript Code Quality Best Practices:
+
+Modern JS/TS patterns to look for:
+- Prefer const over let, never use var
+- Use optional chaining (?.) instead of nested if checks
+- Use nullish coalescing (??) instead of || for default values
+- Prefer async/await over raw Promise chains
+- Always handle Promise rejections — unhandled rejections crash Node.js
+
+Common anti-patterns to flag:
+- Callback hell — deeply nested callbacks instead of async/await
+- Missing error boundaries in React components
+- Direct DOM manipulation in React — use state instead
+- Using any type in TypeScript — defeats the purpose of TypeScript
+- Not cleaning up useEffect subscriptions — causes memory leaks
+- Mutating state directly in React: state.items.push() instead of setState
+
+React specific:
+- useEffect with missing dependencies in dependency array
+- Creating new objects/arrays inside render — causes unnecessary re-renders
+- Not memoizing expensive calculations with useMemo
+- Passing inline functions as props to child components without useCallback
+- Fetching data without handling loading and error states""",
+        "metadata": {"topic": "code_quality", "language": "javascript"}
+    },
+
+{
+        "content": """API Design Best Practices:
+
+RESTful API patterns:
+- Use nouns not verbs for endpoints: /users not /getUsers
+- Use plural nouns: /users not /user
+- Use HTTP methods correctly: GET (read), POST (create), PUT (replace), PATCH (update), DELETE
+- Return appropriate status codes: 200 (ok), 201 (created), 400 (bad request), 401 (unauthorized), 404 (not found), 500 (server error)
+- Never return 200 with an error message in the body
+
+Request/Response patterns:
+- Always validate input before processing
+- Return consistent error response shapes: {error: string, detail: string}
+- Paginate list endpoints — never return unlimited results
+- Use query parameters for filtering: /users?role=admin&active=true
+- Version your API from day one: /api/v1/
+
+Security patterns for APIs:
+- Rate limit all endpoints — especially auth endpoints
+- Never expose internal IDs if they're sequential (use UUIDs)
+- Always authenticate before authorizing
+- Log requests but never log request bodies that might contain passwords
+- Set appropriate CORS headers — never use wildcard in production with credentials""",
+        "metadata": {"topic": "code_quality", "language": "api"}
+    }

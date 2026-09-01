@@ -19,6 +19,10 @@ class RepoState(TypedDict):
     #Filled in by repository Agent
     repo_data: Optional[dict]
 
+    # Filled in by Code Fetcher Agent
+    fetched_code: Optional[dict]
+    code_summary: Optional[str]
+
     # Filled in by Architecture Agent
     architecture_analysis: Optional[dict]
 
@@ -33,6 +37,11 @@ class RepoState(TypedDict):
 
     # Filled in by Refactoring Agent (Step 8)
     refactoring_suggestions: Optional[dict]
+
+    code_quality_analysis: Optional[dict]
+
+    # Optimization Agent — NEW
+    optimization_analysis: Optional[dict]
 
     # Filled in by Interview Agent (Step 8)
     interview_content: Optional[dict]

@@ -40,7 +40,7 @@ def interview_agent(state: RepoState) -> dict:
     Inputs from state:  repo_data, architecture_analysis
     Outputs to state:   interview_content
     """
-    print("🎯 Interview Agent: Generating interview questions...")
+    print("Interview Agent: Generating interview questions...")
 
     if not state.get("repo_data"):
         return {
@@ -109,7 +109,7 @@ Generate:
         if result is None:
             raise last_error or RuntimeError("All models exhausted")
 
-        print(f"✅ Interview Agent: Generated {len(result.get('technical_questions', []))} questions")
+        print(f"Interview Agent: Generated {len(result.get('technical_questions', []))} questions")
 
         return {
             "interview_content": result,
@@ -119,7 +119,7 @@ Generate:
 
     except Exception as e:
         error_msg = f"Interview Agent failed: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
         return {
             "interview_content": None,
             "completed_agents": state.get("completed_agents", []),

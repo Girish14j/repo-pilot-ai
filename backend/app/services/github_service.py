@@ -112,3 +112,130 @@ class GitHubService:
             file_tree=file_tree,
             readme=readme_content,
         )
+
+    # ─── PR Methods ───────────────────────────────────────────────────────────
+
+    def parse_pr_url(self, url: str) -> tuple[str, str, int]:
+        """
+        Converts a GitHub PR URL into (owner, repo, pr_number).
+
+        Example:
+        "https://github.com/tiangolo/fastapi/pull/1234"
+        → ("tiangolo", "fastapi", 1234)
+        """
+        parts = url.strip("/").split("/")
+
+        # Valid PR URL has format:
+        # https://github.com/{owner}/{repo}/pull/{number}
+        # parts: ["https:", "", "github.com", owner, repo, "pull", number]
+        if len(parts) < 7 or "github.com" not in parts or "pull" not in parts:
+            raise ValueError(f"Invalid GitHub PR URL: {url}")
+
+        pull_index = parts.index("pull")
+        owner = parts[pull_index - 2]
+        repo = parts[pull_index - 1]
+
+        try:
+            pr_number = int(parts[pull_index + 1])
+        except (IndexError, ValueError):
+            raise ValueError(f"Could not extract PR number from URL: {url}")
+
+        return owner, repo, pr_number
+
+    def fetch_pr(self, url: str):
+        """
+        Main method: fetches all PR data and returns a PRContext.
+
+        Makes 3 GitHub API calls:
+        1. PR metadata (title, description, branches, author)
+        2. Changed files (filenames, diffs, additions, deletions)
+        3. Commits (sha, message, author, date)
+        """
+        # Import here to avoid circular imports
+        from app.models.pr import PRContext, ChangedFile, PRCommit
+
+        owner, repo, pr_number = self.parse_pr_url(url)
+
+        print(f"🔍 PR Ingestion: Fetching PR #{pr_number} from {owner}/{repo}...")
+
+        with httpx.Client(headers=self.headers, follow_redirects=True) as client:
+
+            # ── 1. PR Metadata ─────────────────────────────────────
+            pr_response = client.get(
+                f"{self.BASE_URL}/repos/{owner}/{repo}/pulls/{pr_number}"
+            )
+            pr_response.raise_for_status()
+            pr_data = pr_response.json()
+
+            # ── 2. Changed Files ───────────────────────────────────
+            # GitHub paginates this — we fetch up to 100 files
+            # (GitHub's max per page for this endpoint)
+            files_response = client.get(
+                f"{self.BASE_URL}/repos/{owner}/{repo}/pulls/{pr_number}/files",
+                params={"per_page": 100}
+            )
+            files_response.raise_for_status()
+            files_data = files_response.json()
+
+            # ── 3. Commits ─────────────────────────────────────────
+            commits_response = client.get(
+                f"{self.BASE_URL}/repos/{owner}/{repo}/pulls/{pr_number}/commits",
+                params={"per_page": 100}
+            )
+            commits_response.raise_for_status()
+            commits_data = commits_response.json()
+
+        # ── Parse Changed Files ────────────────────────────────────
+        changed_files = []
+        for f in files_data:
+            changed_files.append(ChangedFile(
+                filename=f.get("filename", ""),
+                status=f.get("status", "modified"),
+                additions=f.get("additions", 0),
+                deletions=f.get("deletions", 0),
+                changes=f.get("changes", 0),
+                # patch is the actual diff — may be None for binary/large files
+                patch=f.get("patch"),
+            ))
+
+        # ── Parse Commits ──────────────────────────────────────────
+        commits = []
+        for c in commits_data:
+            commits.append(PRCommit(
+                sha=c.get("sha", "")[:7],  # short SHA (first 7 chars)
+                message=c.get("commit", {}).get("message", "").split("\n")[0],  # first line only
+                author=c.get("commit", {}).get("author", {}).get("name", "Unknown"),
+                date=c.get("commit", {}).get("author", {}).get("date", ""),
+            ))
+
+        # ── Parse Labels ───────────────────────────────────────────
+        labels = [label.get("name", "") for label in pr_data.get("labels", [])]
+
+        # ── Build PRContext ────────────────────────────────────────
+        pr_context = PRContext(
+            owner=owner,
+            repo=repo,
+            pr_number=pr_number,
+            url=url,
+            title=pr_data.get("title", ""),
+            description=pr_data.get("body"),
+            author=pr_data.get("user", {}).get("login", "Unknown"),
+            state=pr_data.get("state", "open"),
+            base_branch=pr_data.get("base", {}).get("ref", "main"),
+            head_branch=pr_data.get("head", {}).get("ref", ""),
+            created_at=pr_data.get("created_at", ""),
+            updated_at=pr_data.get("updated_at", ""),
+            changed_files=changed_files,
+            commits=commits,
+            total_additions=pr_data.get("additions", 0),
+            total_deletions=pr_data.get("deletions", 0),
+            total_files_changed=pr_data.get("changed_files", 0),
+            labels=labels,
+        )
+
+        print(f"PR Ingestion: '{pr_context.title}'")
+        print(f"   Files: {pr_context.total_files_changed} | "
+              f"+{pr_context.total_additions} / -{pr_context.total_deletions}")
+        print(f"   Commits: {len(pr_context.commits)}")
+
+        return pr_context
