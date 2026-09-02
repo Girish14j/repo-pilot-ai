@@ -198,14 +198,16 @@ class GitHubService:
                 patch=f.get("patch"),
             ))
 
-        # ── Parse Commits ──────────────────────────────────────────
+                # ── Parse Commits ──────────────────────────────────────────
         commits = []
         for c in commits_data:
+            commit_data = c.get("commit") or {}
+            author_data = commit_data.get("author") or {}
             commits.append(PRCommit(
-                sha=c.get("sha", "")[:7],  # short SHA (first 7 chars)
-                message=c.get("commit", {}).get("message", "").split("\n")[0],  # first line only
-                author=c.get("commit", {}).get("author", {}).get("name", "Unknown"),
-                date=c.get("commit", {}).get("author", {}).get("date", ""),
+                sha=c.get("sha", "")[:7],
+                message=commit_data.get("message", "").split("\n")[0],
+                author=author_data.get("name", "Unknown"),
+                date=author_data.get("date", ""),
             ))
 
         # ── Parse Labels ───────────────────────────────────────────
