@@ -18,12 +18,12 @@ def repository_agent(state: RepoState) -> dict:
     Outputs to state:   repo_data, completed_agents, errors
     """
 
-    print("🔍 Repository Agent: Fetching repository data...")
+    print("Repository Agent: Fetching repository data...")
 
     try:
         repo_data = github_service.fetch_repo(state["repo_url"])
 
-        print(f"✅ Repository Agent: Fetched {repo_data.full_name}")
+        print(f"Repository Agent: Fetched {repo_data.full_name}")
 
         return{
             # Convert Pydantic model to dict so it can be stored in state
@@ -37,7 +37,7 @@ def repository_agent(state: RepoState) -> dict:
             "errors": state.get("errors", []),
         }
     except Exception as e:
-        print(f"❌ Repository Agent: Error fetching repository data: {e}")
+        print(f"[ERROR] Repository Agent: Error fetching repository data: {e}")
 
         return {
             "repo_data": None,

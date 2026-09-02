@@ -20,18 +20,24 @@ def final_report_agent(state: RepoState) -> dict:
     documentation = state.get("documentation_analysis") or {}
     security = state.get("security_analysis") or {}
     performance = state.get("performance_analysis") or {}
-
+    code_quality = state.get("code_quality_analysis") or {}      # ← NEW
+    optimization = state.get("optimization_analysis") or {} 
     #calculates overall score from all agent scores
     scores = {
         "architecture": architecture.get("score", 0),
         "documentation": documentation.get("score", 0),
         "security": security.get("score", 0),
         "performance": performance.get("score", 0),
+        "code_quality": code_quality.get("score", 0)
     }
 
     # Only average scores that were actually computed
     valid_scores = [s for s in scores.values() if s > 0]
     overall_score = round(sum(valid_scores) / len(valid_scores), 1) if valid_scores else 0
+
+    # Count total issues found in code
+    code_issues = code_quality.get("issues", [])
+    critical_issues = [i for i in code_issues if i.get("severity") == "critical"]
 
     final_report = {
         "repository": {
@@ -52,6 +58,8 @@ def final_report_agent(state: RepoState) -> dict:
             "security": security,
             "performance": performance,
             "refactoring": state.get("refactoring_suggestions"),
+            "code_quality": code_quality,      
+            "optimization": optimization, 
         },
         "career": {
             "interview": state.get("interview_content"),
@@ -61,6 +69,7 @@ def final_report_agent(state: RepoState) -> dict:
             "completed_agents": state.get("completed_agents", []),
             "errors": state.get("errors", []),
             "total_agents_run": len(state.get("completed_agents", [])),
+            "critical_issues_found": len(critical_issues),
         }
     }
 

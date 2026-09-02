@@ -37,13 +37,13 @@ def build_vector_store() -> Chroma:
     # If the vector store already exists on disk, load it
     # This avoids re-embedding every time the server starts
     if os.path.exists(CHROMA_PERSIST_PATH):
-        print("📚 RAG: Loading existing vector store from disk...")
+        print("[RAG] Loading existing vector store from disk...")
         return Chroma(
             persist_directory=CHROMA_PERSIST_PATH,
             embedding_function=embeddings,
         )
 
-    print("📚 RAG: Building vector store from knowledge base...")
+    print("[RAG] Building vector store from knowledge base...")
 
     # Step 1: Convert knowledge base entries to LangChain Document objects
     # Document is LangChain's standard wrapper: content + metadata
@@ -65,7 +65,7 @@ def build_vector_store() -> Chroma:
     )
     chunks = splitter.split_documents(documents)
 
-    print(f"📚 RAG: Created {len(chunks)} chunks from {len(documents)} documents")
+    print(f"[RAG] Created {len(chunks)} chunks from {len(documents)} documents")
 
     # Step 3 + 4: Embed chunks and store in Chroma
     # from_documents() handles both embedding and storage in one call
@@ -75,7 +75,7 @@ def build_vector_store() -> Chroma:
         persist_directory=CHROMA_PERSIST_PATH,
     )
 
-    print("✅ RAG: Vector store built and saved to disk")
+    print("[RAG] Vector store built and saved to disk")
     return vector_store
 
 

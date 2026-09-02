@@ -47,12 +47,12 @@ def architecture_agent(state: RepoState) -> dict:
     Inputs from state:  repo_data
     Outputs to state:   architecture_analysis, completed_agents, errors
     """
-    print("🏗️  Architecture Agent: Analyzing architecture...")
+    print("Architecture Agent: Analyzing architecture...")
 
     # Safety check — if repository agent failed, skip this agent
     if not state.get("repo_data"):
         error_msg = "Architecture Agent skipped: no repo_data in state"
-        print(f"⚠️  {error_msg}")
+        print(f"[WARN] {error_msg}")
         return {
             "architecture_analysis": None,
             "completed_agents": state.get("completed_agents", []),
@@ -80,7 +80,7 @@ def architecture_agent(state: RepoState) -> dict:
     )
     # Combine both into one context block
     rag_context = f"{solid_knowledge}\n\n{architecture_knowledge}"
-    print(f"📚 Architecture Agent: Retrieved {len(rag_context)} chars of RAG context")
+    print(f"Architecture Agent: Retrieved {len(rag_context)} chars of RAG context")
     # ──────────────────────────────────────────────────────────────
 
     parser = JsonOutputParser(pydantic_object=ArchitectureAnalysis)
@@ -144,13 +144,13 @@ Score the architecture from 0-10 where:
                 result = (prompt | llm | parser).invoke(payload)
                 break
             except (RateLimitError, APIConnectionError, APIStatusError) as e:
-                print(f"⚠️  Model {model} unavailable ({type(e).__name__}), trying next...")
+                print(f"[WARN] Model {model} unavailable ({type(e).__name__}), trying next...")
                 last_error = e
 
         if result is None:
             raise last_error or RuntimeError("All models exhausted")
 
-        print(f"✅ Architecture Agent: Score {result.get('score', 'N/A')}/10")
+        print(f"Architecture Agent: Score {result.get('score', 'N/A')}/10")
 
         return {
             "architecture_analysis": result,
@@ -160,7 +160,7 @@ Score the architecture from 0-10 where:
 
     except Exception as e:
         error_msg = f"Architecture Agent failed: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
 
         return {
             "architecture_analysis": None,

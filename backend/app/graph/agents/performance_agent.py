@@ -116,12 +116,12 @@ Score 0-10 where 10 = excellent performance architecture."""
                 result = (prompt | llm | parser).invoke(payload)
                 break
             except (RateLimitError, APIConnectionError, APIStatusError) as e:
-                print(f"⚠️  Model {model} unavailable ({type(e).__name__}), trying next...")
+                print(f"[WARN] Model {model} unavailable ({type(e).__name__}), trying next...")
                 last_error = e
         if result is None:
             raise last_error or RuntimeError("All models exhausted")
 
-        print(f"✅ Performance Agent: Score {result.get('score', 'N/A')}/10")
+        print(f"Performance Agent: Score {result.get('score', 'N/A')}/10")
 
         return {
             "performance_analysis": result,
@@ -131,7 +131,7 @@ Score 0-10 where 10 = excellent performance architecture."""
 
     except Exception as e:
         error_msg = f"Performance Agent failed: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
         return {
             "performance_analysis": None,
             "completed_agents": state.get("completed_agents", []),

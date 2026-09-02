@@ -44,7 +44,7 @@ def refactoring_agent(state: RepoState) -> dict:
     Inputs from state:  repo_data, architecture_analysis
     Outputs to state:   refactoring_suggestions
     """
-    print("🔧 Refactoring Agent: Generating refactoring suggestions...")
+    print("Refactoring Agent: Generating refactoring suggestions...")
 
     if not state.get("repo_data"):
         return {
@@ -123,7 +123,7 @@ Provide:
         if result is None:
             raise last_error or RuntimeError("All models exhausted")
 
-        print(f"✅ Refactoring Agent: Generated suggestions")
+        print(f"Refactoring Agent: Generated suggestions")
 
         return {
             "refactoring_suggestions": result,
@@ -133,7 +133,7 @@ Provide:
 
     except Exception as e:
         error_msg = f"Refactoring Agent failed: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
         return {
             "refactoring_suggestions": None,
             "completed_agents": state.get("completed_agents", []),
